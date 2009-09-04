@@ -1,0 +1,34 @@
+<package>
+<description brief="Stage">
+
+This package contains the Stage robot simulator, from the Player Project
+(http://playerstage.sf.net). This package does not modify Stage in any way,
+but uses a pre-3.0, unreleased version of Stage.  This package will
+eventually be updated to a newer version of Stage.
+
+This package also provides stageros, a ROS node that uses Stage.
+
+</description>
+<author>Richard Vaughan, with contributions from many others. See web page for a full credits list.</author>
+<license>GPL</license>
+<review status="unreviewed" notes=""/>
+<url>http://playerstage.sf.net</url>
+<versioncontrol type="svn" url="https://playerstage.svn.sourceforge.net/svnroot/playerstage/code/stage/branches/stage-ros"/>
+
+  <depend package="roscpp" />
+  <depend package="std_msgs" />
+  <depend package="nav_msgs" />
+  <depend package="sensor_msgs" />
+  <depend package="geometry_msgs" />
+  <depend package="tf" />
+
+<rosdep name="autoconf"/>
+<rosdep name="automake"/>
+<rosdep name="libtool"/>
+<rosdep name="gtk2"/>
+<rosdep name="fltk"/>
+<rosdep name="pkg-config"/>
+<rosdep name="libjpeg"/>
+</package>
+
+
