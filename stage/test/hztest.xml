@@ -1,4 +1,5 @@
 <launch>
+  <param name="/use_sim_time" value="true"/>
   <!-- Bring up the node we want to test. -->
   <node pkg="stage" type="stageros" args="-g $(find stage)/world/willow-erratic.world"/>
 
