@@ -1,7 +1,7 @@
 <stack name="simulator_stage" version="0.1.0">
   <description brief="simulator_stage">
 
-     2D simulation using Stage.
+     2D simulation using the Stage multi-robot simulator.
 
   </description>
   <author>Maintained by Brian Gerkey</author>
