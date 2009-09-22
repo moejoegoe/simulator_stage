@@ -180,6 +180,7 @@ StageNode::StageNode(int argc, char** argv, bool gui, const char* fname)
   else
     this->world = new Stg::StgWorld();
 
+  this->world->Update();
   this->world->Load(fname);
 
   this->world->ForEachModel((GHFunc)ghfunc, this);
