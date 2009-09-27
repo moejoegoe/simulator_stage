@@ -4,4 +4,3 @@ libjpeg:
   fedora: libjpeg-devel
   macports: jpeg
   arch: libjpeg
-
