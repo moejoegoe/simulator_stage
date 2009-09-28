@@ -11,7 +11,7 @@ This package also provides stageros, a ROS node that uses Stage.
 </description>
 <author>Richard Vaughan, with contributions from many others. See web page for a full credits list.</author>
 <license>GPL</license>
-<review status="unreviewed" notes=""/>
+<review status="API cleared, doc cleared" notes=""/>
 <url>http://playerstage.sf.net</url>
 <versioncontrol type="svn" url="https://playerstage.svn.sourceforge.net/svnroot/playerstage/code/stage/branches/stage-ros"/>
 
