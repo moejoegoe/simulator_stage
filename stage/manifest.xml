@@ -22,6 +22,11 @@ This package also provides stageros, a ROS node that uses Stage.
   <depend package="geometry_msgs" />
   <depend package="tf" />
 
+  <export> 
+    <cpp cflags="`PKG_CONFIG_PATH=${prefix}/lib/pkgconfig:$PKG_CONFIG_PATH pkg-config --cflags stage`" 
+         lflags="`PKG_CONFIG_PATH=${prefix}/lib/pkgconfig:$PKG_CONFIG_PATH pkg-config --libs stage`"/> 
+  </export> 
+
 <rosdep name="autoconf"/>
 <rosdep name="automake"/>
 <rosdep name="libtool"/>
