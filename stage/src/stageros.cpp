@@ -43,7 +43,7 @@
 #include <sensor_msgs/LaserScan.h>
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/Twist.h>
-#include <roslib/Time.h>
+#include <roslib/Clock.h>
 
 #include "tf/transform_broadcaster.h"
 
@@ -61,7 +61,7 @@ class StageNode
     sensor_msgs::LaserScan *laserMsgs;
     nav_msgs::Odometry *odomMsgs;
     nav_msgs::Odometry *groundTruthMsgs;
-    roslib::Time timeMsg;
+    roslib::Clock clockMsg;
 
     // roscpp-related bookkeeping
     ros::NodeHandle n_;
@@ -76,7 +76,7 @@ class StageNode
     std::vector<ros::Publisher> odom_pubs_;
     std::vector<ros::Publisher> ground_truth_pubs_;
     std::vector<ros::Subscriber> cmdvel_subs_;
-    ros::Publisher time_pub_;
+    ros::Publisher clock_pub_;
 
     // A helper function that is executed for each stage model.  We use it
     // to search for models of interest.
@@ -231,7 +231,7 @@ StageNode::SubscribeModels()
     ground_truth_pubs_.push_back(n_.advertise<nav_msgs::Odometry>(mapName(BASE_POSE_GROUND_TRUTH,r), 10));
     cmdvel_subs_.push_back(n_.subscribe<geometry_msgs::Twist>(mapName(CMD_VEL,r), 10, boost::bind(&StageNode::cmdvelReceived, this, r, _1)));
   }
-  time_pub_ = n_.advertise<roslib::Time>("/time",10);
+  clock_pub_ = n_.advertise<roslib::Clock>("/clock",10);
   return(0);
 }
 
@@ -356,8 +356,8 @@ StageNode::Update()
     this->ground_truth_pubs_[r].publish(this->groundTruthMsgs[r]);
   }
 
-  this->timeMsg.rostime = sim_time;
-  this->time_pub_.publish(this->timeMsg);
+  this->clockMsg.clock = sim_time;
+  this->clock_pub_.publish(this->clockMsg);
 }
 
 int 
