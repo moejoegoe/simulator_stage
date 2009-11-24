@@ -42,7 +42,7 @@ Transforms.Show\ Names=1
 Transforms.Update\ Rate=1
 Camera\ Type=Top-down Orthographic
 Camera\ Config=-33.0919 0.0334784 30 -4.51958 -0.706391 -0.0318091 -0.0318091 0.706391
-Property\ Grid\ State=selection=;expanded=Transforms.Frames,Transforms./base_laser/base_laser,Transforms./base_link/base_link,Transforms./base_footprint/base_footprint,Transforms./odom/odom,Transforms.Tree,Transforms./odomTree/odom,Transforms./base_footprintTree/base_footprint,Transforms./base_linkTree/base_link,Transforms./base_laserTree/base_laser;scrollpos=0,0;splitterpos=133,268;ispageselected=1
+Property\ Grid\ State=selection=;expanded=Transforms.Frames,Transforms./base_laser_link/base_laser_link,Transforms./base_link/base_link,Transforms./base_footprint/base_footprint,Transforms./odom/odom,Transforms.Tree,Transforms./odomTree/odom,Transforms./base_footprintTree/base_footprint,Transforms./base_linkTree/base_link,Transforms./base_laser_linkTree/base_laser_link;scrollpos=0,0;splitterpos=133,268;ispageselected=1
 [Display0]
 Type=Grid
 Name=Grid
@@ -54,6 +54,6 @@ Type=Laser Scan
 Name=Laser Scan
 [Transforms.]
 base_footprintEnabled=1
-base_laserEnabled=1
+base_laser_linkEnabled=1
 base_linkEnabled=1
 odomEnabled=1

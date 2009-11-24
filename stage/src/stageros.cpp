@@ -283,18 +283,18 @@ StageNode::Update()
         this->laserMsgs[r].intensities[i] = (uint8_t)samples[i].reflectance;
       }
 
-      this->laserMsgs[r].header.frame_id = mapName("base_laser", r);
+      this->laserMsgs[r].header.frame_id = mapName("base_laser_link", r);
       this->laserMsgs[r].header.stamp = sim_time;
       this->laser_pubs_[r].publish(this->laserMsgs[r]);
     }
 
-    // Also publish the base->base_laser Tx.  This could eventually move
+    // Also publish the base->base_laser_link Tx.  This could eventually move
     // into being retrieved from the param server as a static Tx.
     Stg::stg_pose_t lp = this->lasermodels[r]->GetPose();
     tf.sendTransform(tf::Stamped<tf::Transform> 
         (tf::Transform(tf::Quaternion(lp.a, 0, 0), 
                        tf::Point(lp.x, lp.y, 0.15)),
-         sim_time, mapName("base_laser", r), mapName("base_link", r)));
+         sim_time, mapName("base_laser_link", r), mapName("base_link", r)));
     // Send the identity transform between base_footprint and base_link
     tf::Transform txIdentity(tf::Quaternion(0, 0, 0), tf::Point(0, 0, 0));
     tf.sendTransform(tf::Stamped<tf::Transform>
