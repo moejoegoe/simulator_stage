@@ -291,15 +291,22 @@ StageNode::Update()
     // Also publish the base->base_laser_link Tx.  This could eventually move
     // into being retrieved from the param server as a static Tx.
     Stg::stg_pose_t lp = this->lasermodels[r]->GetPose();
-    tf.sendTransform(tf::Stamped<tf::Transform> 
-        (tf::Transform(tf::Quaternion(lp.a, 0, 0), 
-                       tf::Point(lp.x, lp.y, 0.15)),
-         sim_time, mapName("base_laser_link", r), mapName("base_link", r)));
+    tf::Quaternion laserQ;
+    laserQ.setRPY(0.0, 0.0, lp.a);
+    tf::Transform txLaser =  tf::Transform(laserQ,
+                                            tf::Point(lp.x, lp.y, 0.15));
+    tf.sendTransform(tf::StampedTransform(txLaser, sim_time,
+                                          mapName("base_link", r),
+                                          mapName("base_laser_link", r)));
+
     // Send the identity transform between base_footprint and base_link
-    tf::Transform txIdentity(tf::Quaternion(0, 0, 0), tf::Point(0, 0, 0));
-    tf.sendTransform(tf::Stamped<tf::Transform>
-        (txIdentity,
-         sim_time, mapName("base_link", r), mapName("base_footprint", r)));
+    tf::Transform txIdentity(tf::createIdentityQuaternion(),
+                             tf::Point(0, 0, 0));
+    tf.sendTransform(tf::StampedTransform(txIdentity,
+                                          sim_time,
+                                          mapName("base_footprint", r),
+                                          mapName("base_link", r)));
+
     // Get latest odometry data
     // Translate into ROS message format and publish
     this->odomMsgs[r].pose.pose.position.x = this->positionmodels[r]->est_pose.x;
@@ -318,23 +325,26 @@ StageNode::Update()
 
     this->odom_pubs_[r].publish(this->odomMsgs[r]);
 
-    tf::Quaternion q;
-    tf::quaternionMsgToTF(odomMsgs[r].pose.pose.orientation, q);
-    tf::Stamped<tf::Transform> tx(
-        tf::Transform(
-          q, 
-          tf::Point(odomMsgs[r].pose.pose.position.x, odomMsgs[r].pose.pose.position.y, 0.0)),
-        sim_time, mapName("base_footprint", r), mapName("odom", r));
-    this->tf.sendTransform(tx);
-      
+    // broadcast odometry transform
+    tf::Quaternion odomQ;
+    tf::quaternionMsgToTF(odomMsgs[r].pose.pose.orientation, odomQ);
+    tf::Transform txOdom(odomQ, 
+                         tf::Point(odomMsgs[r].pose.pose.position.x,
+                                   odomMsgs[r].pose.pose.position.y, 0.0));
+    tf.sendTransform(tf::StampedTransform(txOdom, sim_time,
+                                          mapName("odom", r),
+                                          mapName("base_footprint", r)));
+
     // Also publish the ground truth pose and velocity
     Stg::stg_pose_t gpose = this->positionmodels[r]->GetGlobalPose();
     Stg::stg_velocity_t gvel = this->positionmodels[r]->GetGlobalVelocity();
     // Note that we correct for Stage's screwed-up coord system.
-    tf::Transform gt(tf::Quaternion(gpose.a-M_PI/2.0, 0, 0), 
-        tf::Point(gpose.y, -gpose.x, 0.0));
-    tf::Transform gv(tf::Quaternion(gvel.a-M_PI/2.0, 0, 0), 
-        tf::Point(gvel.y, -gvel.x, 0.0));
+    tf::Quaternion q_gpose;
+    q_gpose.setRPY(0.0, 0.0, gpose.a-M_PI/2.0);
+    tf::Transform gt(q_gpose, tf::Point(gpose.y, -gpose.x, 0.0));
+    tf::Quaternion q_gvel;
+    q_gvel.setRPY(0.0, 0.0, gvel.a-M_PI/2.0);
+    tf::Transform gv(q_gvel, tf::Point(gvel.y, -gvel.x, 0.0));
 
     this->groundTruthMsgs[r].pose.pose.position.x     = gt.getOrigin().x();
     this->groundTruthMsgs[r].pose.pose.position.y     = gt.getOrigin().y();
