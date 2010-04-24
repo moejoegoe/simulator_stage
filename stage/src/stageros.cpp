@@ -124,7 +124,7 @@ StageNode::mapName(const char *name, size_t robotID)
   if (positionmodels.size() > 1)
   {
     static char buf[100];
-    snprintf(buf, sizeof(buf), "/robot_%d/%s", robotID, name);
+    snprintf(buf, sizeof(buf), "/robot_%u/%s", (unsigned int)robotID, name);
     return buf;
   }
   else
@@ -191,7 +191,7 @@ StageNode::StageNode(int argc, char** argv, bool gui, const char* fname)
     ROS_BREAK();
   }
   size_t numRobots = positionmodels.size();
-  ROS_INFO("found %d position model(s) in the file", numRobots);
+  ROS_INFO("found %u position model(s) in the file", (unsigned int)numRobots);
 
   this->laserMsgs = new sensor_msgs::LaserScan[numRobots];
   this->odomMsgs = new nav_msgs::Odometry[numRobots];
@@ -253,6 +253,13 @@ StageNode::Update()
   this->world->Update();
 
   this->sim_time.fromSec(world->SimTimeNow() / 1e6);
+  // We're not allowed to publish clock==0, because it used as a special
+  // value in parts of ROS, #4027.
+  if(this->sim_time.sec == 0 && this->sim_time.nsec == 0)
+  {
+    ROS_DEBUG("Skipping initial simulation step, to avoid publishing clock==0");
+    return;
+  }
 
   // TODO make this only affect one robot if necessary
   if((this->base_watchdog_timeout.toSec() > 0.0) &&
