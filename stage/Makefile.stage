@@ -1,19 +1,30 @@
 all: installed
 
-SVN_DIR = build/stage-svn
-SVN_URL = https://playerstage.svn.sourceforge.net/svnroot/playerstage/code/stage/branches/stage-ros
+# We build from a tarball of an svn export of gmapping at revision 8262.  To
+# get the original code (e.g., to make a new patch):
+#  svn co -r 8262 https://playerstage.svn.sourceforge.net/svnroot/playerstage/code/stage/branches/stage-ros
+FILENAME = stage-svn-r8262.tgz
+TARBALL = build/$(FILENAME)
 SVN_REVISION = -r 8262
-include $(shell rospack find mk)/svn_checkout.mk
+TARBALL_URL = http://pr.willowgarage.com/downloads/$(FILENAME)
+SOURCE_DIR = build/stage-svn-r8262
+UNPACK_CMD = tar xzf
+MD5SUM_FILE = $(FILENAME).md5sum
+include $(shell rospack find mk)/download_unpack_build.mk
 
-installed: $(SVN_DIR) patched Makefile.stage
-	cd $(SVN_DIR) && autoreconf -i -s
-	cd $(SVN_DIR) && ./configure --prefix=`pwd`/../..
-	cd $(SVN_DIR) && make install
+installed: wiped $(SOURCE_DIR)/unpacked Makefile.stage
+	cd $(SOURCE_DIR) && autoreconf -i -s
+	cd $(SOURCE_DIR) && ./configure --prefix=`pwd`/../..
+	cd $(SOURCE_DIR) && make install
 	touch installed
 
 clean:
-	-cd $(SVN_DIR) && make clean
-	rm -rf stage installed patched
+	-cd $(SOURCE_DIR) && make clean
+	rm -rf stage installed
+
+wiped: Makefile.stage
+	make -f Makefile.stage wipe
+	touch wiped
 
 wipe: clean
-	rm -rf $(SVN_DIR)
+	rm -rf build
