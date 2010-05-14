@@ -1,0 +1,11 @@
+diff -ur ./libstage/CMakeLists.txt ../../Stage-3.2.2-Source/libstage/CMakeLists.txt
+--- ./libstage/CMakeLists.txt	2009-10-28 13:48:05.000000000 -0700
++++ ../../Stage-3.2.2-Source/libstage/CMakeLists.txt	2010-05-13 17:55:53.000000000 -0700
+@@ -58,6 +58,7 @@
+ set_target_properties( stage PROPERTIES
+ 		       VERSION ${VERSION}
+              LINK_FLAGS "${FLTK_LDFLAGS}"	  
++	     INSTALL_NAME_DIR ${CMAKE_INSTALL_PREFIX}/lib
+ )
+ 
+ set( stagebinarySrcs main.cc )

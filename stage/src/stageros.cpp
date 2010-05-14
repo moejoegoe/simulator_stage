@@ -31,6 +31,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <signal.h>
 
 
 // libstage
@@ -84,8 +85,10 @@ class StageNode
 
     static bool s_update(Stg::World* world, StageNode* node)
     {
-      node->Update();
-      return true;
+      node->WorldCallback();
+      // We return false to indicate that we want to be called again (an
+      // odd convention, but that's the way that Stage works).
+      return false;
     }
 
     // Appends the given robot ID to the given message name.  If omitRobotID
@@ -112,9 +115,12 @@ class StageNode
     // 0 on success (both models subscribed), -1 otherwise.
     int SubscribeModels();
 
-    // Do one update of the simulator.  May pause if the next update time
+    // Our callback
+    void WorldCallback();
+    
+    // Do one update of the world.  May pause if the next update time
     // has not yet arrived.
-    void Update();
+    bool UpdateWorld();
 
     // Message callback for a MsgBaseVel message, which set velocities.
     void cmdvelReceived(int idx, const boost::shared_ptr<geometry_msgs::Twist const>& msg);
@@ -137,7 +143,6 @@ StageNode::mapName(const char *name, size_t robotID)
     return name;
 }
 
-// TODO
 void
 StageNode::ghfunc(Stg::Model* mod, StageNode* node)
 {
@@ -185,12 +190,15 @@ StageNode::StageNode(int argc, char** argv, bool gui, const char* fname)
   else
     this->world = new Stg::World();
 
-  //this->world->AddUpdateCallback((Stg::stg_world_callback_t)s_update, this);
-
-  this->world->Update();
+  // Apparently an Update is needed before the Load to avoid crashes on
+  // startup on some systems.
+  this->UpdateWorld();
   this->world->Load(fname);
 
-  //TODO
+  // We add our callback here, after the Update, so avoid our callback
+  // being invoked before we're ready.
+  this->world->AddUpdateCallback((Stg::stg_world_callback_t)s_update, this);
+
   this->world->ForEachDescendant((Stg::stg_model_callback_t)ghfunc, this);
   if (lasermodels.size() != positionmodels.size())
   {
@@ -255,17 +263,16 @@ StageNode::~StageNode()
   delete[] groundTruthMsgs;
 }
 
-void
-StageNode::Update()
+bool
+StageNode::UpdateWorld()
 {
-  printf("in Update\n");
-  // Wait until it's time to update
-  //TODO
-  //this->world->PauseUntilNextUpdateTime();
-  boost::mutex::scoped_lock lock(msg_lock);
+  return this->world->UpdateAll();
+}
 
-  // Let the simulator update (it will sleep if there's time)
-  //this->world->Update();
+void
+StageNode::WorldCallback()
+{
+  boost::mutex::scoped_lock lock(msg_lock);
 
   this->sim_time.fromSec(world->SimTimeNow() / 1e6);
   // We're not allowed to publish clock==0, because it used as a special
@@ -392,6 +399,13 @@ StageNode::Update()
   this->clock_pub_.publish(this->clockMsg);
 }
 
+static bool quit = false;
+void
+sigint_handler(int num)
+{
+  quit = true;
+}
+
 int 
 main(int argc, char** argv)
 { 
@@ -416,10 +430,13 @@ main(int argc, char** argv)
     exit(-1);
 
   boost::thread t = boost::thread::thread(boost::bind(&ros::spin));
-  Fl::run();
+
   while(ros::ok() && !sn.world->TestQuit())
   {
-    sn.Update();
+    if(gui)
+      Fl::wait(0.1);
+    else
+      sn.UpdateWorld();
   }
   t.join();
 

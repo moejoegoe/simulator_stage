@@ -2,6 +2,7 @@ all: installed
 
 FILENAME = Stage-3.2.2-Source.tar.gz
 TARBALL = build/$(FILENAME)
+TARBALL_PATCH = Stage-3.2.2-Source.patch
 TARBALL_URL = http://pr.willowgarage.com/downloads/$(FILENAME)
 SOURCE_DIR = build/Stage-3.2.2-Source
 UNPACK_CMD = tar xzf
