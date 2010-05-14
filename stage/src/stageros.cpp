@@ -70,8 +70,8 @@ class StageNode
     boost::mutex msg_lock;
 
     // The models that we're interested in
-    std::vector<Stg::StgModelLaser *> lasermodels;
-    std::vector<Stg::StgModelPosition *> positionmodels;
+    std::vector<Stg::ModelLaser *> lasermodels;
+    std::vector<Stg::ModelPosition *> positionmodels;
     std::vector<ros::Publisher> laser_pubs_;
     std::vector<ros::Publisher> odom_pubs_;
     std::vector<ros::Publisher> ground_truth_pubs_;
@@ -80,7 +80,13 @@ class StageNode
 
     // A helper function that is executed for each stage model.  We use it
     // to search for models of interest.
-    static void ghfunc(gpointer key, Stg::StgModel* mod, StageNode* node);
+    static void ghfunc(Stg::Model* mod, StageNode* node);
+
+    static bool s_update(Stg::World* world, StageNode* node)
+    {
+      node->Update();
+      return true;
+    }
 
     // Appends the given robot ID to the given message name.  If omitRobotID
     // is true, an unaltered copy of the name is returned.
@@ -114,7 +120,7 @@ class StageNode
     void cmdvelReceived(int idx, const boost::shared_ptr<geometry_msgs::Twist const>& msg);
 
     // The main simulator object
-    Stg::StgWorld* world;
+    Stg::World* world;
 };
 
 // since stageros is single-threaded, this is OK. revisit if that changes!
@@ -131,15 +137,14 @@ StageNode::mapName(const char *name, size_t robotID)
     return name;
 }
 
+// TODO
 void
-StageNode::ghfunc(gpointer key,
-                  Stg::StgModel* mod,
-                  StageNode* node)
+StageNode::ghfunc(Stg::Model* mod, StageNode* node)
 {
-  if (dynamic_cast<Stg::StgModelLaser *>(mod))
-    node->lasermodels.push_back(dynamic_cast<Stg::StgModelLaser *>(mod));
-  if (dynamic_cast<Stg::StgModelPosition *>(mod))
-    node->positionmodels.push_back(dynamic_cast<Stg::StgModelPosition *>(mod));
+  if (dynamic_cast<Stg::ModelLaser *>(mod))
+    node->lasermodels.push_back(dynamic_cast<Stg::ModelLaser *>(mod));
+  if (dynamic_cast<Stg::ModelPosition *>(mod))
+    node->positionmodels.push_back(dynamic_cast<Stg::ModelPosition *>(mod));
 }
 
 void
@@ -176,14 +181,17 @@ StageNode::StageNode(int argc, char** argv, bool gui, const char* fname)
   Stg::Init( &argc, &argv );
 
   if(gui)
-    this->world = new Stg::StgWorldGui(800, 700, "Stage (ROS)");
+    this->world = new Stg::WorldGui(800, 700, "Stage (ROS)");
   else
-    this->world = new Stg::StgWorld();
+    this->world = new Stg::World();
+
+  //this->world->AddUpdateCallback((Stg::stg_world_callback_t)s_update, this);
 
   this->world->Update();
   this->world->Load(fname);
 
-  this->world->ForEachModel((GHFunc)ghfunc, this);
+  //TODO
+  this->world->ForEachDescendant((Stg::stg_model_callback_t)ghfunc, this);
   if (lasermodels.size() != positionmodels.size())
   {
     ROS_FATAL("number of position models and laser models must be equal in "
@@ -191,7 +199,8 @@ StageNode::StageNode(int argc, char** argv, bool gui, const char* fname)
     ROS_BREAK();
   }
   size_t numRobots = positionmodels.size();
-  ROS_INFO("found %u position model(s) in the file", (unsigned int)numRobots);
+  ROS_INFO("found %u position/laser pair%s in the file", 
+           (unsigned int)numRobots, (numRobots==1) ? "" : "s");
 
   this->laserMsgs = new sensor_msgs::LaserScan[numRobots];
   this->odomMsgs = new nav_msgs::Odometry[numRobots];
@@ -213,14 +222,18 @@ StageNode::SubscribeModels()
   for (size_t r = 0; r < this->positionmodels.size(); r++)
   {
     if(this->lasermodels[r])
+    {
       this->lasermodels[r]->Subscribe();
+    }
     else
     {
       ROS_ERROR("no laser");
       return(-1);
     }
     if(this->positionmodels[r])
+    {
       this->positionmodels[r]->Subscribe();
+    }
     else
     {
       ROS_ERROR("no position");
@@ -245,12 +258,14 @@ StageNode::~StageNode()
 void
 StageNode::Update()
 {
+  printf("in Update\n");
   // Wait until it's time to update
-  this->world->PauseUntilNextUpdateTime();
+  //TODO
+  //this->world->PauseUntilNextUpdateTime();
   boost::mutex::scoped_lock lock(msg_lock);
 
   // Let the simulator update (it will sleep if there's time)
-  this->world->Update();
+  //this->world->Update();
 
   this->sim_time.fromSec(world->SimTimeNow() / 1e6);
   // We're not allowed to publish clock==0, because it used as a special
@@ -272,11 +287,11 @@ StageNode::Update()
   // Get latest laser data
   for (size_t r = 0; r < this->lasermodels.size(); r++)
   {
-    Stg::stg_laser_sample_t* samples = this->lasermodels[r]->GetSamples();
-    if(samples)
+    std::vector<Stg::ModelLaser::Sample> samples = this->lasermodels[r]->GetSamples();
+    if(samples.size())
     {
       // Translate into ROS message format and publish
-      Stg::stg_laser_cfg_t cfg = this->lasermodels[r]->GetConfig();
+      Stg::ModelLaser::Config cfg = this->lasermodels[r]->GetConfig();
       this->laserMsgs[r].angle_min = -cfg.fov/2.0;
       this->laserMsgs[r].angle_max = +cfg.fov/2.0;
       this->laserMsgs[r].angle_increment = cfg.fov/(double)(cfg.sample_count-1);
@@ -297,7 +312,7 @@ StageNode::Update()
 
     // Also publish the base->base_laser_link Tx.  This could eventually move
     // into being retrieved from the param server as a static Tx.
-    Stg::stg_pose_t lp = this->lasermodels[r]->GetPose();
+    Stg::Pose lp = this->lasermodels[r]->GetPose();
     tf::Quaternion laserQ;
     laserQ.setRPY(0.0, 0.0, lp.a);
     tf::Transform txLaser =  tf::Transform(laserQ,
@@ -319,7 +334,7 @@ StageNode::Update()
     this->odomMsgs[r].pose.pose.position.x = this->positionmodels[r]->est_pose.x;
     this->odomMsgs[r].pose.pose.position.y = this->positionmodels[r]->est_pose.y;
     this->odomMsgs[r].pose.pose.orientation = tf::createQuaternionMsgFromYaw(this->positionmodels[r]->est_pose.a);
-    Stg::stg_velocity_t v = this->positionmodels[r]->GetVelocity();
+    Stg::Velocity v = this->positionmodels[r]->GetVelocity();
     this->odomMsgs[r].twist.twist.linear.x = v.x;
     this->odomMsgs[r].twist.twist.linear.y = v.y;
     this->odomMsgs[r].twist.twist.angular.z = v.a;
@@ -343,8 +358,8 @@ StageNode::Update()
                                           mapName("base_footprint", r)));
 
     // Also publish the ground truth pose and velocity
-    Stg::stg_pose_t gpose = this->positionmodels[r]->GetGlobalPose();
-    Stg::stg_velocity_t gvel = this->positionmodels[r]->GetGlobalVelocity();
+    Stg::Pose gpose = this->positionmodels[r]->GetGlobalPose();
+    Stg::Velocity gvel = this->positionmodels[r]->GetGlobalVelocity();
     // Note that we correct for Stage's screwed-up coord system.
     tf::Quaternion q_gpose;
     q_gpose.setRPY(0.0, 0.0, gpose.a-M_PI/2.0);
@@ -401,6 +416,7 @@ main(int argc, char** argv)
     exit(-1);
 
   boost::thread t = boost::thread::thread(boost::bind(&ros::spin));
+  Fl::run();
   while(ros::ok() && !sn.world->TestQuit())
   {
     sn.Update();

@@ -7,3 +7,6 @@ all: clean-old-build
 clean-old-build:
 	if [ -d build/stage-svn ]; then rm -rf build; fi
 
+clean: extra-clean
+extra-clean:
+	make -f Makefile.stage clean

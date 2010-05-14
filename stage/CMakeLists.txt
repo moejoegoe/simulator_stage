@@ -12,9 +12,6 @@ if(_make_failed)
   message(FATAL_ERROR "Build of Stage failed")
 endif(_make_failed)
 
-set_directory_properties(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES stage-svn)
-
-
 # Find the build flags for Stage
 set(ENV{PKG_CONFIG_PATH} "${PROJECT_SOURCE_DIR}/lib/pkgconfig:$ENV{PKG_CONFIG_PATH}")
 pkg_check_modules(STAGE REQUIRED stage)
