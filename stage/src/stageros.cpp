@@ -431,12 +431,18 @@ main(int argc, char** argv)
 
   boost::thread t = boost::thread::thread(boost::bind(&ros::spin));
 
+  // TODO: get rid of this fixed-duration sleep, using some Stage builtin
+  // PauseUntilNextUpdate() functionality.
+  ros::WallRate r(10.0);
   while(ros::ok() && !sn.world->TestQuit())
   {
     if(gui)
-      Fl::wait(0.1);
+      Fl::wait(r.expectedCycleTime().toSec());
     else
+    {
       sn.UpdateWorld();
+      r.sleep();
+    }
   }
   t.join();
 
