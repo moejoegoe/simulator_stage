@@ -24,4 +24,4 @@ wiped: Makefile.stage
 	touch wiped
 
 wipe: clean
-	rm -rf build
+	rm -rf $(SOURCE_DIR)/build
