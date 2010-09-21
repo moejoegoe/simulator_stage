@@ -1,6 +1,6 @@
-diff -ur ./libstage/CMakeLists.txt ../../Stage-3.2.2-Source/libstage/CMakeLists.txt
---- ./libstage/CMakeLists.txt	2009-10-28 13:48:05.000000000 -0700
-+++ ../../Stage-3.2.2-Source/libstage/CMakeLists.txt	2010-05-13 17:55:53.000000000 -0700
+diff -ur Stage-3.2.2-Source/libstage/CMakeLists.txt ../Stage-3.2.2-Source/libstage/CMakeLists.txt
+--- Stage-3.2.2-Source/libstage/CMakeLists.txt	2009-10-28 13:48:05.000000000 -0700
++++ ../Stage-3.2.2-Source/libstage/CMakeLists.txt	2010-09-20 14:00:54.847045541 -0700
 @@ -58,6 +58,7 @@
  set_target_properties( stage PROPERTIES
  		       VERSION ${VERSION}
@@ -9,19 +9,19 @@ diff -ur ./libstage/CMakeLists.txt ../../Stage-3.2.2-Source/libstage/CMakeLists.
  )
  
  set( stagebinarySrcs main.cc )
---- libstage/stage.hh	2009-10-28 15:48:05.000000000 -0500
-+++ /home/joq/svn/cturtle/simulator_stage/stage/build/Stage-3.2.2-Source/libstage/stage.hh	2010-09-05 12:11:29.235849642 -0500
-@@ -2827,7 +2827,7 @@
- 	 DriveMode drive_mode;
- 	 LocalizationMode localization_mode; ///< global or local mode
- 	 Velocity integration_error; ///< errors to apply in simple odometry model
--	 
-+	 double wheelbase;
- 	 
-   public:
- 	 // constructor
---- libstage/model_position.cc	2009-10-28 15:48:05.000000000 -0500
-+++ /home/joq/svn/cturtle/simulator_stage/stage/build/Stage-3.2.2-Source/libstage/model_position.cc	2010-09-05 12:14:07.535855169 -0500
+@@ -70,6 +71,9 @@
+ set_target_properties( stagebinary PROPERTIES OUTPUT_NAME stage )
+ 
+ target_link_libraries( stagebinary stage )
++set_target_properties( stagebinary PROPERTIES
++             LINK_FLAGS "${FLTK_LDFLAGS}"	  
++)
+ 
+ INSTALL(TARGETS stagebinary stage
+ 	RUNTIME DESTINATION bin
+diff -ur Stage-3.2.2-Source/libstage/model_position.cc ../Stage-3.2.2-Source/libstage/model_position.cc
+--- Stage-3.2.2-Source/libstage/model_position.cc	2009-10-28 13:48:05.000000000 -0700
++++ ../Stage-3.2.2-Source/libstage/model_position.cc	2010-09-20 13:43:13.574744164 -0700
 @@ -47,6 +47,9 @@
      # only used if localization is set to "odom"
      odom_error [0.03 0.03 0.00 0.05]
@@ -78,3 +78,16 @@ diff -ur ./libstage/CMakeLists.txt ../../Stage-3.2.2-Source/libstage/CMakeLists.
  					 break;
  			  
  				  default:
+diff -ur Stage-3.2.2-Source/libstage/stage.hh ../Stage-3.2.2-Source/libstage/stage.hh
+--- Stage-3.2.2-Source/libstage/stage.hh	2009-10-28 13:48:05.000000000 -0700
++++ ../Stage-3.2.2-Source/libstage/stage.hh	2010-09-20 13:43:13.574744164 -0700
+@@ -2827,7 +2827,7 @@
+ 	 DriveMode drive_mode;
+ 	 LocalizationMode localization_mode; ///< global or local mode
+ 	 Velocity integration_error; ///< errors to apply in simple odometry model
+-	 
++	 double wheelbase;
+ 	 
+   public:
+ 	 // constructor
+Only in ../Stage-3.2.2-Source: unpacked
