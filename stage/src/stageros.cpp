@@ -48,6 +48,8 @@
 
 #include "tf/transform_broadcaster.h"
 
+#include "sonar_joy/Sonar.h"
+
 #define USAGE "stageros <worldfile>"
 #define ODOM "odom"
 #define BASE_SCAN "base_scan"
@@ -60,6 +62,7 @@ class StageNode
   private:
     // Messages that we'll send or receive
     sensor_msgs::LaserScan *laserMsgs;
+    sonar_joy::Sonar *rangerMsgs;
     nav_msgs::Odometry *odomMsgs;
     nav_msgs::Odometry *groundTruthMsgs;
     roslib::Clock clockMsg;
@@ -73,7 +76,9 @@ class StageNode
     // The models that we're interested in
     std::vector<Stg::ModelLaser *> lasermodels;
     std::vector<Stg::ModelPosition *> positionmodels;
+    std::vector<Stg::ModelRanger *> rangermodels;
     std::vector<ros::Publisher> laser_pubs_;
+    std::vector<ros::Publisher> ranger_pubs_;
     std::vector<ros::Publisher> odom_pubs_;
     std::vector<ros::Publisher> ground_truth_pubs_;
     std::vector<ros::Subscriber> cmdvel_subs_;
@@ -146,6 +151,8 @@ StageNode::mapName(const char *name, size_t robotID)
 void
 StageNode::ghfunc(Stg::Model* mod, StageNode* node)
 {
+  if (dynamic_cast<Stg::ModelRanger *>(mod))
+    node->rangermodels.push_back(dynamic_cast<Stg::ModelRanger *>(mod));
   if (dynamic_cast<Stg::ModelLaser *>(mod))
     node->lasermodels.push_back(dynamic_cast<Stg::ModelLaser *>(mod));
   if (dynamic_cast<Stg::ModelPosition *>(mod))
@@ -210,6 +217,7 @@ StageNode::StageNode(int argc, char** argv, bool gui, const char* fname)
   ROS_INFO("found %u position/laser pair%s in the file", 
            (unsigned int)numRobots, (numRobots==1) ? "" : "s");
 
+  this->rangerMsgs= new sonar_joy::Sonar[numRobots];
   this->laserMsgs = new sensor_msgs::LaserScan[numRobots];
   this->odomMsgs = new nav_msgs::Odometry[numRobots];
   this->groundTruthMsgs = new nav_msgs::Odometry[numRobots];
@@ -238,6 +246,10 @@ StageNode::SubscribeModels()
       ROS_ERROR("no laser");
       return(-1);
     }
+    if(this->rangermodels[r])
+      {
+	this->rangermodels[r]->Subscribe();
+    }
     if(this->positionmodels[r])
     {
       this->positionmodels[r]->Subscribe();
@@ -248,6 +260,7 @@ StageNode::SubscribeModels()
       return(-1);
     }
     laser_pubs_.push_back(n_.advertise<sensor_msgs::LaserScan>(mapName(BASE_SCAN,r), 10));
+    ranger_pubs_.push_back(n_.advertise<sonar_joy::Sonar>(mapName("ranger_set",r), 10));
     odom_pubs_.push_back(n_.advertise<nav_msgs::Odometry>(mapName(ODOM,r), 10));
     ground_truth_pubs_.push_back(n_.advertise<nav_msgs::Odometry>(mapName(BASE_POSE_GROUND_TRUTH,r), 10));
     cmdvel_subs_.push_back(n_.subscribe<geometry_msgs::Twist>(mapName(CMD_VEL,r), 10, boost::bind(&StageNode::cmdvelReceived, this, r, _1)));
@@ -258,6 +271,7 @@ StageNode::SubscribeModels()
 
 StageNode::~StageNode()
 {
+  delete[] rangerMsgs;
   delete[] laserMsgs;
   delete[] odomMsgs;
   delete[] groundTruthMsgs;
@@ -327,7 +341,40 @@ StageNode::WorldCallback()
     tf.sendTransform(tf::StampedTransform(txLaser, sim_time,
                                           mapName("base_link", r),
                                           mapName("base_laser_link", r)));
-
+					  
+    // Send rangerset transform data
+    Stg::Pose rsp = this->rangermodels[r]->GetPose();
+    tf::Quaternion rangerSetQ;
+    rangerSetQ.setRPY(0.0, 0.0, rsp.a);
+    tf::Transform txRanger =  tf::Transform(rangerSetQ, tf::Point(rsp.x, rsp.y, rsp.z));
+    tf.sendTransform(tf::StampedTransform(txRanger, sim_time, mapName("base_link", r), mapName("base_ranger_link", r)));
+    
+    // Get ranger sensors
+    for (size_t i = 0; i < rangermodels[r]->sensors.size(); i++){
+      // Publish data for each actual ranger
+      ROS_DEBUG("Ranger %d: %f", i, rangermodels[r]->sensors[i].range);
+      ROS_DEBUG("RangerName %s", rangermodels[r]->Token());
+      ROS_DEBUG("RangerSet %d Pose X: %f", r, rangermodels[r]->GetPose().x);
+      ROS_DEBUG("Ranger %d Pose Y: %f", i, rangermodels[r]->sensors[i].pose.y);
+      this->rangerMsgs[r].range = rangermodels[r]->sensors[i].range;
+      this->rangerMsgs[r].beam_angle = rangermodels[r]->sensors[i].fov;
+      this->rangerMsgs[r].max_range = rangermodels[r]->sensors[i].bounds_range.max;
+      this->rangerMsgs[r].min_range = rangermodels[r]->sensors[i].bounds_range.min;
+      std::stringstream frame_id;
+      frame_id << "ranger_" << r << "_" << i << "_link";
+      this->rangerMsgs[r].header.frame_id = frame_id.str();
+      this->rangerMsgs[r].header.stamp = sim_time;
+      this->ranger_pubs_[r].publish(this->rangerMsgs[r]);
+      
+      // Publish transform for each actual ranger
+      Stg::Pose rp = this->rangermodels[r]->sensors[i].pose;
+      tf::Quaternion rangerQ;
+      rangerQ.setRPY(0.0, 0.0, rp.a);
+      tf::Transform txRanger =  tf::Transform(rangerQ, tf::Point(rp.x, rp.y, rp.z));
+      tf.sendTransform(tf::StampedTransform(txRanger, sim_time, mapName("base_ranger_link", r), frame_id.str()));
+    }
+    
+					  
     // Send the identity transform between base_footprint and base_link
     tf::Transform txIdentity(tf::createIdentityQuaternion(),
                              tf::Point(0, 0, 0));

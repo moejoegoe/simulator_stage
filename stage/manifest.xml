@@ -24,6 +24,7 @@ This package also provides stageros, a ROS node that uses Stage.
   <depend package="sensor_msgs" />
   <depend package="geometry_msgs" />
   <depend package="tf" />
+  <depend package="sonar_joy" />
 
   <export> 
     <cpp cflags="`PKG_CONFIG_PATH=${prefix}/lib/pkgconfig:$PKG_CONFIG_PATH pkg-config --cflags stage`" 
