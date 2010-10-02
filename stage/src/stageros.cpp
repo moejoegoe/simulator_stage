@@ -352,10 +352,6 @@ StageNode::WorldCallback()
     // Get ranger sensors
     for (size_t i = 0; i < rangermodels[r]->sensors.size(); i++){
       // Publish data for each actual ranger
-      ROS_DEBUG("Ranger %d: %f", i, rangermodels[r]->sensors[i].range);
-      ROS_DEBUG("RangerName %s", rangermodels[r]->Token());
-      ROS_DEBUG("RangerSet %d Pose X: %f", r, rangermodels[r]->GetPose().x);
-      ROS_DEBUG("Ranger %d Pose Y: %f", i, rangermodels[r]->sensors[i].pose.y);
       this->rangerMsgs[r].range = rangermodels[r]->sensors[i].range;
       this->rangerMsgs[r].beam_angle = rangermodels[r]->sensors[i].fov;
       this->rangerMsgs[r].max_range = rangermodels[r]->sensors[i].bounds_range.max;
@@ -372,6 +368,17 @@ StageNode::WorldCallback()
       rangerQ.setRPY(0.0, 0.0, rp.a);
       tf::Transform txRanger =  tf::Transform(rangerQ, tf::Point(rp.x, rp.y, rp.z));
       tf.sendTransform(tf::StampedTransform(txRanger, sim_time, mapName("base_ranger_link", r), frame_id.str()));
+      
+      // Various debug messages
+      //ROS_DEBUG("Ranger %d: %f", i, rangermodels[r]->sensors[i].range);
+      //ROS_DEBUG("RangerName %s", rangermodels[r]->Token());
+      //ROS_DEBUG("RangerSet %d Pose X: %f", r, rangermodels[r]->GetPose().x);
+      //ROS_DEBUG("Ranger %d Pose Y: %f", i, rangermodels[r]->sensors[i].pose.y);
+      //ROS_DEBUG("RangerName %s", rangermodels[r]->Token());
+      
+      //TODO Handle names for topic names, etc
+      // Default names are like position:0.ranger:0, or they could be defined using name "robotName" or "sensorName" when making instances in the .world/.inc files.
+      // These cases yield names like: robotName.ranger:0 if the sensor name is not defined and the robot is, or just sensorName is the sensorName is defined.
     }
     
 					  
